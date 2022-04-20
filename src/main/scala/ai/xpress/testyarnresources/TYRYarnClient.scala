@@ -22,11 +22,12 @@ object TYRYarnClient {
 
   val yarnPath: String = "ApplicationMaster/target/scala-2.13/tyram_2.13-0.1.0-SNAPSHOT.jar"
   val applicationMasterJARPath: String = "ApplicationMaster/target/scala-2.13/TYRApplicationMaster-assembly.jar"
+  val classPath: String = ""
 
   /// Application Master commands
   val applicationMasterCommand = List(
-    "$JAVA_HOME:/bin/java -Xmx256M" +
-      " ai.xpress.testyarnresource.TYRApplicationMaster" +
+    "$JAVA_HOME/bin/java -Xmx256M" +
+      " ai.xpress.testyarnresources.TYRApplicationMaster" +
       " 1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
       " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
   )
@@ -37,8 +38,9 @@ object TYRYarnClient {
   )
 
   /// Application Master environment
+  // will be exported in the start script
   val applicationMasterEnvironment = Map(
-    "CLASSPATH" -> "TODO"
+    "CLASSPATH" -> "TYRYarnClient-assembly-0.1.jar"
   )
 
   private val log = Logger.getLogger(TYRYarnClient.getClass.getName)

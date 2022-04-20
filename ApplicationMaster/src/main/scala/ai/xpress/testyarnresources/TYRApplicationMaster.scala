@@ -25,5 +25,7 @@ object TYRApplicationMaster  {
 
     //nmClient = new NMClientAsync.
 
+    println("Test: If you can see this, the ApplicationMaster has been started.")
+
   }
 }
