@@ -6,4 +6,7 @@ object TYRMain extends App {
     println("this should run in some container for the " + no + " time")
     Thread.sleep(1000)
   })
+
+  // TODO: Test for resources
+
 }

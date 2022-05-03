@@ -154,6 +154,7 @@ object TYRYarnClient {
     appContext.setAMContainerSpec(containerSpec)
   }
 
+  // What resources does the ApplicationMaster need?
   private def setupResource(): Resource = {
 
     // Common resources:
@@ -161,6 +162,10 @@ object TYRYarnClient {
     val vCores: Int = 1 // we use only one core
 
     // Other resources: We want one Vector Engine
+    // Note: This means, that the ApplicationMaster wants a
+    // VectorEngine!
+    // If the actually App does need one (or more), change
+    // resources in the container request in the ApplicationMaster
     val otherResources: Map[String, java.lang.Long] = Map(
       "ve" -> 1,
     )
