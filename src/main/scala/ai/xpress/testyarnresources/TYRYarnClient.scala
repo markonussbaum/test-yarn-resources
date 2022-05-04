@@ -1,17 +1,12 @@
 package ai.xpress.testyarnresources
 
-import org.apache.hadoop.fs.{FileContext, FileSystem, Path}
-import org.apache.hadoop.io.DataOutputBuffer
-import org.apache.hadoop.security.UserGroupInformation
+import org.apache.hadoop.fs.{FileContext, Path}
 import org.apache.hadoop.yarn.api.ApplicationConstants
 import org.apache.hadoop.yarn.api.records.{ApplicationId, ApplicationSubmissionContext, ContainerLaunchContext, LocalResource, Priority, Resource}
 import org.apache.hadoop.yarn.client.api.{YarnClient, YarnClientApplication}
 import org.apache.hadoop.yarn.conf.YarnConfiguration
 import org.apache.hadoop.yarn.util.{ConverterUtils, Records}
 import org.apache.hadoop.yarn.api.records.{LocalResourceType, LocalResourceVisibility}
-
-import java.io.File
-import java.nio.ByteBuffer
 import java.util.logging.Logger
 import scala.jdk.CollectionConverters._
 

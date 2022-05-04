@@ -8,11 +8,65 @@ import org.apache.hadoop.yarn.client.api.async.impl.{AMRMClientAsyncImpl, NMClie
 import org.apache.hadoop.yarn.client.api.async.{AMRMClientAsync, NMClientAsync}
 import org.apache.hadoop.yarn.conf.YarnConfiguration
 import org.apache.hadoop.yarn.util.{ConverterUtils, Records}
-
-import java.nio.ByteBuffer
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDateTime, ZoneId}
 import java.util.concurrent.ConcurrentHashMap
+
+
+class TYRApplicationMasterConfig {
+
+  var containerId: ContainerId = null
+  var appSubmissionTime: LocalDateTime = null
+  var nmHost: String = null
+  var nmHttpPort: Int = 0
+  var nmPort: Int = 0
+  var applicationAttemptId: ApplicationAttemptId = null
+  var appMasterTrackingUrl: String = null
+  var appAttemptID: ApplicationAttemptId = null
+  var appID: ApplicationId = null
+
+  def evaluateEnv(): Unit = {
+    val env = System.getenv()
+
+    // helper function
+    def evalMandatoryEnvVar(envVarName: String): String = {
+      val result: String = env.get(envVarName)
+      if (result == null) {
+        throw new RuntimeException("environment variable "
+          + envVarName + " needs to be set.")
+      }
+      result
+    }
+
+    // get container id
+    val containerIdString = evalMandatoryEnvVar(ApplicationConstants.Environment.CONTAINER_ID.toString)
+    this.containerId = ConverterUtils.toContainerId(containerIdString)   // TODO: deprecated, but what is new?
+
+    // get & print application submission time
+    val appTimeStampStr = evalMandatoryEnvVar(ApplicationConstants.APP_SUBMIT_TIME_ENV)
+    val ts = appTimeStampStr.toLong
+    val inst = Instant.ofEpochMilli(ts)
+    this.appSubmissionTime = LocalDateTime.ofInstant(inst, ZoneId.systemDefault())
+
+    this.nmHost = evalMandatoryEnvVar(ApplicationConstants.Environment.NM_HOST.name())
+
+    val httpPortStr = evalMandatoryEnvVar(ApplicationConstants.Environment.NM_HTTP_PORT.name())
+    this.nmHttpPort = httpPortStr.toInt
+
+    val nmPortStr = evalMandatoryEnvVar(ApplicationConstants.Environment.NM_PORT.name())
+    this.nmPort = nmPortStr.toInt
+
+    val nmTrackingUrl = "http://" + nmHost + ":" + nmHttpPort
+    println("NodeManager is running on host " + nmHost + ":" + nmPort)
+    println("with it's web interface at " + nmTrackingUrl)
+
+    // important for communication with RM: ApplicationAttemptId
+    this.appAttemptID = containerId.getApplicationAttemptId
+    println("application attempt id: " + this.appAttemptID.toString)
+  }
+
+}
+
 
 
 /** This is our application master (AM).
@@ -42,16 +96,7 @@ object TYRApplicationMaster  {
   private var nmClientAsync: NMClientAsync = null
   private var containerListener: NMCallbackHandler = null
 
-  private var appAttemptID: ApplicationAttemptId = null
-  private var appID: ApplicationId = null
-
-  private var containerId: ContainerId = null
-  private var appSubmissionTime: LocalDateTime = null
-  private var nmHost: String = null
-  private var nmHttpPort: Int = 0
-  private var nmPort: Int = 0
-  private var applicationAttemptId: ApplicationAttemptId = null
-  private var appMasterTrackingUrl: String = null
+  private var appMasterConfig = new TYRApplicationMasterConfig
 
   // Container Information
   private val containerStartTimes =  new ConcurrentHashMap[ContainerId, Long]()
@@ -60,7 +105,11 @@ object TYRApplicationMaster  {
 
     println("The ApplicationMaster has been started.")
 
-    evaluateEnv()
+    appMasterConfig.evaluateEnv()
+
+    // print some info from env
+    println("Container ID is " + appMasterConfig.containerId.toString)
+    println("Application was submitted at " + appMasterConfig.appSubmissionTime.format(DateTimeFormatter.ISO_DATE_TIME))
 
     copyApplicationToHDFS()
 
@@ -68,7 +117,6 @@ object TYRApplicationMaster  {
     val nmClient = startNodeManagerClient()
 
     requestContainersForApp(rmClient);
-
   }
 
   def requestContainersForApp(rmClient: AMRMClientAsync[ContainerRequest]): Unit = {
@@ -86,47 +134,7 @@ object TYRApplicationMaster  {
     rmClient.addContainerRequest(req)
   }
 
-  def evaluateEnv(): Unit = {
-    val env = System.getenv()
 
-    // helper function
-    def evalMandatoryEnvVar(envVarName: String): String = {
-      val result: String = env.get(envVarName)
-      if (result == null) {
-        throw new RuntimeException("environment variable "
-          + envVarName + " needs to be set.")
-      }
-      result
-    }
-
-    // get & print container id
-    val containerIdString = evalMandatoryEnvVar(ApplicationConstants.Environment.CONTAINER_ID.toString)
-    println("Container ID is " + containerIdString)
-    this.containerId = ConverterUtils.toContainerId(containerIdString)   // TODO: deprecated, but what is new?
-
-    // get & print application submission time
-    val appTimeStampStr = evalMandatoryEnvVar(ApplicationConstants.APP_SUBMIT_TIME_ENV)
-    val ts = appTimeStampStr.toLong
-    val inst = Instant.ofEpochMilli(ts)
-    this.appSubmissionTime = LocalDateTime.ofInstant(inst, ZoneId.systemDefault())
-    println("Application was submitted at " + this.appSubmissionTime.format(DateTimeFormatter.ISO_DATE_TIME))
-
-    this.nmHost = evalMandatoryEnvVar(ApplicationConstants.Environment.NM_HOST.name())
-
-    val httpPortStr = evalMandatoryEnvVar(ApplicationConstants.Environment.NM_HTTP_PORT.name())
-    this.nmHttpPort = httpPortStr.toInt
-
-    val nmPortStr = evalMandatoryEnvVar(ApplicationConstants.Environment.NM_PORT.name())
-    this.nmPort = nmPortStr.toInt
-
-    val nmTrackingUrl = "http://" + nmHost + ":" + nmHttpPort
-    println("NodeManager is running on host " + nmHost + ":" + nmPort)
-    println("with it's web interface at " + nmTrackingUrl)
-
-    // important for communication with RM: ApplicationAttemptId
-    this.appAttemptID = containerId.getApplicationAttemptId
-    println("application attempt id: " + this.appAttemptID.toString)
-  }
 
 
   def copyApplicationToHDFS() = {
